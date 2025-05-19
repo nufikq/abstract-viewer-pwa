@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scopus CSV Abstract Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light theme variables */
+            --bg-gradient-light: linear-gradient(135deg, #f5f7fa 0%, #e8edf2 100%);
+            --text-color-light: #333;
+            --paper-bg-light: #fff;
+            --paper-hover-light: #f0f2f5;
+            --paper-selected-light: #e6f7ff;
+            --border-color-light: #ddd;
+            --header-bg-light: #f5f7fa;
+            --fab-bg-light: #1890ff;
+            --fab-hover-light: #096dd9;
+
+            /* Dark theme variables */
+            --bg-gradient-dark: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            --text-color-dark: #e0e0e0;
+            --paper-bg-dark: #2a3441;
+            --paper-hover-dark: #323e4f;
+            --paper-selected-dark: #1e3a8a;
+            --border-color-dark: #374151;
+            --header-bg-dark: #1f2937;
+            --fab-bg-dark: #3b82f6;
+            --fab-hover-dark: #2563eb;
+        }
+
+        [data-theme="light"] {
+            --bg-gradient: var(--bg-gradient-light);
+            --text-color: var(--text-color-light);
+            --paper-bg: var(--paper-bg-light);
+            --paper-hover: var(--paper-hover-light);
+            --paper-selected: var(--paper-selected-light);
+            --border-color: var(--border-color-light);
+            --header-bg: var(--header-bg-light);
+            --fab-bg: var(--fab-bg-light);
+            --fab-hover: var(--fab-hover-light);
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient: var(--bg-gradient-dark);
+            --text-color: var(--text-color-dark);
+            --paper-bg: var(--paper-bg-dark);
+            --paper-hover: var(--paper-hover-dark);
+            --paper-selected: var(--paper-selected-dark);
+            --border-color: var(--border-color-dark);
+            --header-bg: var(--header-bg-dark);
+            --fab-bg: var(--fab-bg-dark);
+            --fab-hover: var(--fab-hover-dark);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        h2 {
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            background-color: var(--paper-bg);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--header-bg);
+        }
+
+        /* Theme toggle switch */
+        .theme-toggle-container {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+            margin-right: 10px;
+        }
+
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2a3441;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #1890ff;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        .slider:after {
+            content: "🌙";
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            font-size: 16px;
+            color: white;
+        }
+
+        input:checked + .slider:after {
+            content: "☀️";
+            left: auto;
+            right: 4px;
+        }
+
+        /* Add styles for paper items and selection */
+        .paper {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            background-color: var(--paper-bg);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            padding-top: 60px;
+        }
+
+        .paper:hover {
+            background-color: var(--paper-hover);
+            transform: translateY(-2px);
+        }
+
+        .paper.selected {
+            background-color: var(--paper-selected);
+            border-left: 4px solid var(--fab-bg);
+        }
+
+        .paper-title {
+            position: sticky;
+            top: 0;
+            background-color: var(--paper-bg);
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin: -15px -15px 15px -15px;
+            z-index: 50;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px 8px 0 0;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Floating Action Button styles */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background-color: var(--fab-bg);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            font-size: 24px;
+            z-index: 100;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .fab:hover {
+            background-color: var(--fab-hover);
+            transform: scale(1.05);
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--paper-bg);
+            color: var(--text-color);
+            padding: 30px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-section:last-child {
+            border-bottom: none;
+        }
+
+        .modal-section h4 {
+            margin-bottom: 10px;
+            color: var(--fab-bg);
+            font-weight: 500;
+        }
+
+        /* File input styling */
+        .file-input-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #csvFile {
+            background-color: var(--paper-bg);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            flex-grow: 1;
+        }
+
+        #csvFile::file-selector-button {
+            background-color: var(--fab-bg);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background-color 0.2s;
+        }
+
+        #csvFile::file-selector-button:hover {
+            background-color: var(--fab-hover);
+        }
+
+        /* Clear button styles */
+        .clear-button {
+            background-color: #f56565;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s, transform 0.2s;
+            margin-left: auto;
+        }
+
+        .clear-button:hover {
+            background-color: #e53e3e;
+            transform: translateY(-2px);
+        }
+
+        /* Add horizontal rule styling */
+        hr {
+            border: none;
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Scopus CSV Abstract Viewer</h2>
+    <div class="file-input-container">
+        <input type="file" id="csvFile" accept=".csv" />
+        
+    </div>
+    
+    <!-- Add theme toggle -->
+    <div class="theme-toggle-container">
+        <label class="theme-toggle">
+            <input type="checkbox" id="themeToggle">
+            <span class="slider"></span>
+        </label>
+        <span id="themeLabel">Dark Mode</span>
+        <button class="clear-button" id="clearContent">Clear Content</button>
+    </div>
+    
+    <div id="output"></div>
+
+    <!-- Add floating action button -->
+    <div class="fab" id="detailsBtn">i</div>
+
+    <!-- Add modal dialog -->
+    <div class="modal" id="detailsModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Globals to track selected paper and papers data
+        let selectedPaperIndex = -1;
+        let papersData = [];
+
+        // Theme toggling
+        const themeToggle = document.getElementById('themeToggle');
+        const themeLabel = document.getElementById('themeLabel');
+        
+        // Initialize theme based on saved preference or default to dark
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        // Initialize theme toggle based on current theme
+        if (savedTheme === 'light') {
+            themeToggle.checked = true;
+            themeLabel.textContent = 'Light Mode';
+        }
+
+        themeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.documentElement.setAttribute('data-theme', 'light');
+                themeLabel.textContent = 'Light Mode';
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                themeLabel.textContent = 'Dark Mode';
+                localStorage.setItem('theme', 'dark');
+            }
+            
+            // Update sticky titles background
+            updateStickyTitleColors();
+        });
+        
+        function updateStickyTitleColors() {
+            const titles = document.querySelectorAll('.paper-title');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            titles.forEach(title => {
+                title.style.backgroundColor = isDark ? '#2a3441' : '#fff';
+            });
+        }
+
+        // Save scroll position before page refresh
+        window.addEventListener('beforeunload', function() {
+            localStorage.setItem('scrollPosition', window.scrollY);
+        });
+
+        // Clear content button handler
+        document.getElementById('clearContent').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all content? This cannot be undone.')) {
+                localStorage.removeItem('paperData');
+                localStorage.removeItem('htmlContent');
+                localStorage.removeItem('selectedPaperIndex');
+                localStorage.removeItem('scrollPosition');
+                
+                // Clear the UI
+                document.getElementById('output').innerHTML = '';
+                papersData = [];
+                selectedPaperIndex = -1;
+                document.getElementById('csvFile').value = '';
+            }
+        });
+
+        // Parse CSV and display content
+        document.getElementById('csvFile').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const text = event.target.result;
+                
+                // Save the raw CSV to localStorage in case we need it later
+                localStorage.setItem('rawCSV', text);
+                
+                const rows = text.split('\n');
+                let html = '';
+                papersData = []; // Reset papers data
+
+                // Find all needed column indices
+                let titleIndex = -1;
+                let abstractIndex = -1;
+                let authorsIndex = -1;
+                let yearIndex = -1;
+                let linkIndex = -1;
+                let authorKeywordsIndex = -1;
+                let indexKeywordsIndex = -1;
+                
+                if (rows.length > 0) {
+                    // Parse the header row
+                    const headerRow = rows[0];
+                    const headerCols = [];
+                    let currentCol = '';
+                    let inQuotes = false;
+                    
+                    for (let i = 0; i < headerRow.length; i++) {
+                        const char = headerRow[i];
+                        
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            headerCols.push(currentCol.trim());
+                            currentCol = '';
+                        } else {
+                            currentCol += char;
+                        }
+                    }
+                    headerCols.push(currentCol.trim());
+                    
+                    // Find all required column indices
+                    headerCols.forEach((col, idx) => {
+                        const colLower = col.toLowerCase();
+                        if (colLower === 'title') titleIndex = idx;
+                        if (colLower === 'abstract') abstractIndex = idx;
+                        if (colLower === 'authors' || colLower === 'author names') authorsIndex = idx;
+                        if (colLower === 'year' || colLower === 'publication year') yearIndex = idx;
+                        if (colLower === 'link' || colLower === 'url' || colLower === 'doi') linkIndex = idx;
+                        if (colLower === 'author keywords') authorKeywordsIndex = idx;
+                        if (colLower === 'index keywords') indexKeywordsIndex = idx;
+                    });
+                }
+                
+                // If we found at least title and abstract columns
+                if (titleIndex !== -1 && abstractIndex !== -1) {
+                    // Skip the header row (index 0)
+                    for (let index = 1; index < rows.length; index++) {
+                        const row = rows[index];
+                        if (row.trim() === '') continue; // Skip empty rows
+                        
+                        // Parse CSV row properly handling quoted cells
+                        const cols = [];
+                        let currentCol = '';
+                        let inQuotes = false;
+                        
+                        for (let i = 0; i < row.length; i++) {
+                            const char = row[i];
+                            
+                            if (char === '"') {
+                                inQuotes = !inQuotes;
+                            } else if (char === ',' && !inQuotes) {
+                                cols.push(currentCol.trim());
+                                currentCol = '';
+                            } else {
+                                currentCol += char;
+                            }
+                        }
+                        cols.push(currentCol.trim());
+                        
+                        // Extract all needed data if columns are present
+                        if (cols.length > Math.max(titleIndex, abstractIndex)) {
+                            const paperData = {
+                                title: cols[titleIndex].replace(/;/g, ','),
+                                abstract: cols[abstractIndex].replace(/;/g, ','),
+                                authors: authorsIndex !== -1 && cols.length > authorsIndex ? cols[authorsIndex].replace(/;/g, ',') : 'Not available',
+                                year: yearIndex !== -1 && cols.length > yearIndex ? cols[yearIndex] : 'Not available',
+                                link: linkIndex !== -1 && cols.length > linkIndex ? cols[linkIndex] : '#',
+                                authorKeywords: authorKeywordsIndex !== -1 && cols.length > authorKeywordsIndex ? cols[authorKeywordsIndex].replace(/;/g, ',') : 'Not available',
+                                indexKeywords: indexKeywordsIndex !== -1 && cols.length > indexKeywordsIndex ? cols[indexKeywordsIndex].replace(/;/g, ',') : 'Not available'
+                            };
+                            
+                            papersData.push(paperData);
+                            
+                            // Create paragraphs with sticky title
+                            const paperIndex = papersData.length - 1;
+                            html += `<div class="paper" data-index="${paperIndex}" onclick="selectPaper(${paperIndex})">
+                                <h3 class="paper-title">${paperData.title}</h3>
+                                <p>${paperData.abstract}</p>
+                            </div>`;
+                        }
+                    }
+                } else {
+                    html = '<p>Could not find Title and Abstract columns in the CSV.</p>';
+                }
+                
+                // Save data to localStorage for persistence
+                localStorage.setItem('paperData', JSON.stringify(papersData));
+                localStorage.setItem('htmlContent', html);
+                
+                document.getElementById('output').innerHTML = html;
+                
+                // Apply proper colors to sticky titles based on current theme
+                setTimeout(updateStickyTitleColors, 0);
+            };
+            reader.readAsText(file);
+        });
+
+        // Function to select a paper
+        function selectPaper(index) {
+            // Deselect previously selected paper
+            const previouslySelected = document.querySelector('.paper.selected');
+            if (previouslySelected) {
+                previouslySelected.classList.remove('selected');
+            }
+            
+            // Select new paper
+            const paperElement = document.querySelector(`.paper[data-index="${index}"]`);
+            if (paperElement) {
+                paperElement.classList.add('selected');
+                selectedPaperIndex = index;
+                
+                // Save selected index to localStorage
+                localStorage.setItem('selectedPaperIndex', index);
+            }
+        }
+
+        // Show modal with paper details
+        document.getElementById('detailsBtn').addEventListener('click', function() {
+            if (selectedPaperIndex === -1) {
+                alert('Please select a paper first');
+                return;
+            }
+            
+            const paper = papersData[selectedPaperIndex];
+            const modal = document.getElementById('detailsModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            // Format the paper details
+            let content = `
+                <div class="modal-section">
+                    <h2>${paper.title}</h2>
+                </div>
+                
+                <div class="modal-section">
+                    <h4>Authors</h4>
+                    <p>${paper.authors}</p>
+                </div>
+                
+                <div class="modal-section">
+                    <h4>Year</h4>
+                    <p>${paper.year}</p>
+                </div>
+                
+                <div class="modal-section">
+                    <h4>Link</h4>
+                    <p>${paper.link !== '#' ? `<a href="${paper.link}" target="_blank" style="color: var(--fab-bg);">${paper.link}</a>` : 'Not available'}</p>
+                </div>
+                
+                <div class="modal-section">
+                    <h4>Author Keywords</h4>
+                    <p>${paper.authorKeywords}</p>
+                </div>
+                
+                <div class="modal-section">
+                    <h4>Index Keywords</h4>
+                    <p>${paper.indexKeywords}</p>
+                </div>
+
+                <div class="modal-section">
+                    <h4>Abstract</h4>
+                    <p>${paper.abstract}</p>
+                </div>
+            `;
+            
+            modalContent.innerHTML = content;
+            modal.style.display = 'flex';
+        });
+        
+        // Close modal
+        document.getElementById('closeModal').addEventListener('click', function() {
+            document.getElementById('detailsModal').style.display = 'none';
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('detailsModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Restore state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Restore papers data and HTML content if available
+            const savedPaperData = localStorage.getItem('paperData');
+            const savedHtmlContent = localStorage.getItem('htmlContent');
+            
+            if (savedPaperData && savedHtmlContent) {
+                papersData = JSON.parse(savedPaperData);
+                document.getElementById('output').innerHTML = savedHtmlContent;
+                
+                // Restore selected paper if any
+                const savedSelectedIndex = localStorage.getItem('selectedPaperIndex');
+                if (savedSelectedIndex !== null) {
+                    const indexNum = parseInt(savedSelectedIndex);
+                    setTimeout(() => selectPaper(indexNum), 100);
+                }
+                
+                // Update sticky title colors
+                setTimeout(updateStickyTitleColors, 200);
+                
+                // Restore scroll position if any
+                const savedScrollPosition = localStorage.getItem('scrollPosition');
+                if (savedScrollPosition !== null) {
+                    setTimeout(() => window.scrollTo(0, parseInt(savedScrollPosition)), 200);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
