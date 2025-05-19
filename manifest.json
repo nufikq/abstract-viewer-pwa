@@ -2,7 +2,7 @@
   "name": "Scopus CSV Abstract Viewer",
   "short_name": "ViewerApp",
   "start_url": "index.html",
-  "scope": "/"
+  "scope": "/",
   "display": "standalone",
   "background_color": "#1f2937",
   "theme_color": "#111827",
